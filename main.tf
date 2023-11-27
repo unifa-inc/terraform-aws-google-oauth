@@ -18,7 +18,7 @@ resource aws_cognito_identity_provider this {
   provider_type = "Google"
 
   provider_details = {
-    authorize_scopes = "email"
+    authorize_scopes = "profile email openid"
     client_id        = var.google_client_id
     client_secret    = var.google_client_secret
   }
