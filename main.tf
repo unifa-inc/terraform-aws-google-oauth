@@ -5,6 +5,28 @@ locals {
 resource aws_cognito_user_pool this {
   name                     = format("%s-google-oauth-pool", var.prefix)
   auto_verified_attributes = ["email"]
+  username_attributes      = ["email"]
+
+  admin_create_user_config {
+    allow_admin_create_user_only = true
+  }
+
+  email_configuration {
+    email_sending_account = "COGNITO_DEFAULT"
+  }
+  
+  password_policy {
+    minimum_length                   = 8
+    require_lowercase                = true
+    require_numbers                  = true
+    require_symbols                  = true
+    require_uppercase                = true
+    temporary_password_validity_days = 7
+  }
+
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+  }
 }
 
 resource aws_cognito_user_pool_domain this {
@@ -16,11 +38,18 @@ resource aws_cognito_identity_provider this {
   user_pool_id  = aws_cognito_user_pool.this.id
   provider_name = "Google"
   provider_type = "Google"
+  idp_identifiers = []
 
   provider_details = {
     authorize_scopes = "profile email openid"
     client_id        = var.google_client_id
     client_secret    = var.google_client_secret
+    attributes_url                = "https://people.googleapis.com/v1/people/me?personFields="
+    attributes_url_add_attributes = "true"
+    authorize_url                 = "https://accounts.google.com/o/oauth2/v2/auth"
+    oidc_issuer                   = "https://accounts.google.com"
+    token_request_method          = "POST"
+    token_url                     = "https://www.googleapis.com/oauth2/v4/token"
   }
 
   attribute_mapping = {
@@ -40,6 +69,8 @@ resource aws_cognito_user_pool_client client {
   allowed_oauth_scopes = ["email", "openid", "profile"]
 
   supported_identity_providers = ["Google"]
+
+  generate_secret = true
 }
 
 resource aws_lb_listener_rule this {
@@ -63,7 +94,13 @@ resource aws_lb_listener_rule this {
 
   condition {
     path_pattern {
-      values = ["*"]
+      values = ["/*"]
     }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      action
+    ]
   }
 }
